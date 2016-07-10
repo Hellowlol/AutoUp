@@ -25,7 +25,7 @@ class MonitorDatabase(object):
         self.filename = filename
         if fp is None:
             self.fp = 'xx.db'
-        self.connection = sqlite3.connect(self.fp), timeout=20)
+        self.connection = sqlite3.connect(self.fp, timeout=20)
         # Don't wait for the disk to finish writing
         self.connection.execute("PRAGMA synchronous = OFF")
         # Journal disabled since we never do rollbacks
@@ -67,7 +67,7 @@ class MonitorDatabase(object):
             return sql_result
 
     def create_table(self, table, args=''):
-        self.action('CREATE TABLE IF NOT EXISTS %s (id INTEGER PRIMARY KEY AUTOINCREMENT, %s)' % (table, args)))
+        self.action('CREATE TABLE IF NOT EXISTS %s (id INTEGER PRIMARY KEY AUTOINCREMENT, %s)' % (table, args))
 
     def select(self, query, args=None):
 

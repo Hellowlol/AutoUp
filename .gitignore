@@ -44,4 +44,17 @@ $RECYCLE.BIN/
 .AppleDesktop
 Network Trash Folder
 Temporary Items
+
+# python stuff
+*.py[co]
 .apdisk
+.idea
+
+#
+core/*.ini
+userdata/
+
+# remove this later
+build/
+dist/
+autoup.egg-info/
