@@ -1,8 +1,8 @@
 import json
 import os
+import logging
 import re
 import subprocess
-import logging
 import time
 from functools import wraps
 
@@ -15,13 +15,13 @@ import itertools
 from imgurpython import ImgurClient
 import tvdbapi_client
 from imdbpie import Imdb
+import core
 
 log = logging.getLogger(__name__)
 SESSION = requests.Session()
 
- # get from config
 
-import core
+
 
 try:
     import lxml
