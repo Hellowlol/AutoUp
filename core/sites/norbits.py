@@ -108,12 +108,13 @@ class Norbits(Site):
 
         return r
 
-    def upload(self, data, dry_run):
+    def upload(self, data, dry_run, torrent_path=None):
         """ Takes a dict or media_element"""
         # _.upload expects a dict
         if not isinstance(data, dict):
             # returns the form..
-            data = self.prepare(data)
+            data, torrent_path = self.prepare(data)
+            #print 'torrent_path', torrent_path
 
         if dry_run:
             log.debug('Didnt upload to site because of dry run')
@@ -125,6 +126,7 @@ class Norbits(Site):
         if r.status_code == 302:
             log.debug('302 somehting')
         #    return self._upload(data)
+        return data, torrent_path
 
     def prepare(self, media_element, categories=None, comment=None):
         """ Prepare for upload
@@ -245,9 +247,8 @@ class Norbits(Site):
             if media_element.has_images:
                 imgz = upload_to_imgurl(media_element.has_images, filename)
                 imgz = '\n\n'.join([i for z in imgz for i in z])
+                desc += 'Some Random Screenshots\n\n'
                 desc += imgz
-                # fix me
-                #self.uploadform['descr'] = (None, 'test upload from https://github.com/Hellowlol/AutoUp, do not publish test of images' + imgz)
 
             if me['type'] == 'episode' and query_predb(filename):
                 log.info('%s was a found on predb, this is a scene release')
@@ -264,7 +265,7 @@ class Norbits(Site):
         #print(self.uploadform)
         #print pp(self.uploadform)
 
-        return self.uploadform
+        return self.uploadform, torrent_info._filepath
 
     def _upload(self, data=None):
         response = self.fetcher(self.norbits_upload_url, action='post', files=data)

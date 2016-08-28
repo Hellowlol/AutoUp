@@ -3,34 +3,6 @@ import re
 from configobj import ConfigObj
 import os
 
-"""
-_CONFIG_DEFINITIONS = {
-    'general': {
-        'loglvl': 'info',
-        'watched_paths': '',  #list
-        'blocked': '',
-        'media_info_cli': 'mediainfo',
-        'episode_summary': '',
-        'movie_summary': '',
-        'enabled_sites': ''
-    },
-    'norbits': {
-        'username': '',
-        'password': '',
-        'apikey': '',
-        'valid_ext': []
-    },
-    'clients': {'qbittorrent': {'url': '',
-                                'username': '',
-                                'password': '',
-                               },
-                'deluge': {'url': '',
-                           'username': '',
-                           'password': ''}
-    }
-}
-"""
-
 log = logging.getLogger(__name__)
 
 
@@ -90,8 +62,8 @@ class Config(object):
         for key in _CONFIG_DEFINITIONS.keys():
             self.check_setting(key)
 
-
-    def _define(self, name):
+    @staticmethod
+    def _define(name):
         key = name.upper()
         ini_key = name.lower()
         definition = _CONFIG_DEFINITIONS[key]

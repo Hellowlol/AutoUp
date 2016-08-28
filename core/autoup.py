@@ -36,7 +36,7 @@ class Autoup(object):
         torrent tracker"""
 
     def __init__(self, config_file=None, watched_paths=None,
-                 enabled_sites=None, dry_run=False, report=False,
+                 enabled_sites=None, enabled_clients=None, dry_run=False, report=False,
                  comment=False, *args, **kwargs):  # add kwargs
 
         self._config_file = config_file
@@ -48,6 +48,7 @@ class Autoup(object):
         #core.CONFIG = CONFIG
         self.comment = comment
         self._enabled_sites = self.load_sites(enabled_sites)
+        self_enabled_clients = self.load_clients(enabled_clients)
         self.__watch_paths = watched_paths or self.config.WATCHED_PATHS
         self.__watcher = Observer()
         self.dry_run = dry_run
@@ -59,6 +60,23 @@ class Autoup(object):
     def sites(self, path=None):
         """ try to load all python in sites folder """
         pass
+
+    def load_clients(self, enabled_clients=None):
+        """Simple function that dynamically loads the torrent sites
+
+            Args:
+                enabled_clients (str, list, none): loads from config file if omitted
+
+            Returns:
+                A list of clients initalized
+        """
+
+        if enabled_clients is None:
+            enabled_clients = '' # fix me
+
+        from core.clients import qbt
+        print self.config.get('qbittorrent')
+        #enabled_clients = [qbt.Qbittorrent(self.config.get('qbittorrent'))]
 
     def load_sites(self, enabled_sites=None):
         """Simple function that dynamically loads the torrent sites
@@ -95,7 +113,7 @@ class Autoup(object):
 
         return sites
 
-    def upload(self, media_elements=None):
+    def upload(self, media_elements=None, seed=None):
         """Upload the torrent to the torrent sites
 
            Args:
@@ -105,6 +123,9 @@ class Autoup(object):
             Returns:
 
         """
+
+        if seed is None:
+            seed = True # core.CONFIG.SEED # fix me
 
         if media_elements is None:
             # default paths
@@ -117,12 +138,18 @@ class Autoup(object):
 
         # Make media elements from paths
         media_elements = self.prepare(media_elements)
+        torrent_files = []
 
         for site in self._enabled_sites:  # Just add site param to?
             for media_element in media_elements:
-                s = self._upload_site(site, media_element, self.dry_run)
+                s, tf = self._upload_site(site, media_element, self.dry_run)
+                torrent_files.append(tf)
+
+        if seed is True:
+            self.seed(torrent_files)
 
     def _upload_site(self, site, media_element, dry_run):
+
         return site.upload(media_element, dry_run=dry_run)
 
     def download(self, torrent, path=None):
@@ -131,7 +158,7 @@ class Autoup(object):
 
     def seed(self):
         """ start add the torrent to your torrent client """
-        pass
+
 
     def scan(self, paths=None):
         """ find the abs path of all the files in the watched paths """
@@ -237,6 +264,7 @@ if __name__ == '__main__':  # pragma: no cover
     #import time
     #start = time.time()
     AU = Autoup()
+    AU.load_clients()
     #AU.scan()
     #AU.sites()
     #AU.upload()
