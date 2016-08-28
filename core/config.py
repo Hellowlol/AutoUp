@@ -1,7 +1,8 @@
 import logging
 import re
+
 from configobj import ConfigObj
-import os
+
 
 log = logging.getLogger(__name__)
 
@@ -17,23 +18,22 @@ def bool_int(value):
 
 _CONFIG_DEFINITIONS = {
     'LOGLVL': (str, 'general', 'info'),
-    'WATCHED_PATHS': (list, 'general', ''),  #list
+    'WATCHED_PATHS': (list, 'general', ''),  # list
     'BLOCKED': (str, 'general', ''),
-    'MEDIA_INFO_CLI': (str, 'general', 'media_info_cli'), # fullpath or in env path
+    'MEDIA_INFO_CLI': (str, 'general', 'media_info_cli'),  # fullpath or in env path
     'EPISODE_SUMMARY': (bool, 'general', False),
     'MOVIE_SITES': (bool, 'general', False),
     'ENABLED_SITES': (list, 'general', ''),
+    'ENABLED_CLIENTS': (list, 'general', ''),
     'FFMPEG': (str, 'general', 'ffmpeg'),
-    'DB': (str, 'general', 'C:\Users\steffen\Documents\GitHub\AutoUp\userdata\autoup.db'), # fix me
+    'DB': (str, 'general', 'C:\Users\steffen\Documents\GitHub\AutoUp\userdata\autoup.db'),  # fix me
 
-    'IMGUR_CLIENT_ID': (str, 'imgur', '47d69f063752039'), # Use your own.
+    'IMGUR_CLIENT_ID': (str, 'imgur', '47d69f063752039'),  # Use your own.
     'IMGUR_CLIENT_SECRET': (str, 'imgur', '34b43ca44eb088ed05f0ae1bbf22edcd489589a0'),
 
     'THETVDB_APIKEY': (str, 'thetvdb', 'C614040AE87171D0'),
     'THETVDB_USERNAME': (str, 'thetvdb', 'autoup'),
     'THETVDB_USERPASS': (str, 'thetvdb', 'A80D10B8022EBDFE'),
-
-
 
     # Norbits
     'NORBITS_USERNAME': (str, 'norbits', ''),

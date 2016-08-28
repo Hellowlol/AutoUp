@@ -8,11 +8,15 @@ class Qbittorrent(Client):
         self.username = kwargs.get('username', 'admin')
         self.password = kwargs.get('password', '123456')
         self.url = kwargs.get('url', 'http://127.0.0.1:7777/')
+        self.qb = None
 
-        self.qb = q_client(self.url)
-        self.qb.login(username=self.username, password=self.password)
+        try:
+            self.qb = q_client(self.url)
+            self.qb.login(username=self.username, password=self.password)
+        except:
+            pass
 
-    def download_torrent(self, torrent, save_path, label=''):
+    def download_torrent(self, torrent, save_path, label='', *args, **kwargs):
         """ Add a torrent to the torrent client
 
             Args:
@@ -23,15 +27,19 @@ class Qbittorrent(Client):
             Returns:
                 Ok regardsless if fails or not
         """
-        if any(i for i in ['http', 'magnet:', 'bc://bt/'] if torrent.startswith(i)):
-            return self.qb.download_from_link(torrent, save_path=save_path, label=label)
+        if self.qb:
 
-        if ',' in torrent:  # Assume its a sting, , should never be in a fp anyway
-            torrent = [open(t, 'rb') for t in torrent.split(',')]
-        else:
-            torrent = open(torrent, 'rb')
+            if any(i for i in ['http', 'magnet:', 'bc://bt/'] if torrent.startswith(i)):
+                return self.qb.download_from_link(torrent, save_path=save_path, label=label)
 
-        return self.qb.download_from_file(torrent, save_path=save_path, label=label)
+            if ',' in torrent:  # Assume its a sting, , should never be in a fp anyway
+                torrent = [open(t, 'rb') for t in torrent.split(',')]
+            else:
+                torrent = open(torrent, 'rb')
+
+            # add fix for dirs etc..
+
+            return self.qb.download_from_file(torrent, save_path=save_path, label=label)
 
     def get_torrents(self, **kwargs):
         r = self.qb.torrents(status='all', limit=9999, **kwargs)
@@ -85,5 +93,7 @@ if __name__ == '__main__':
     from pprint import pprint
     start = time.time()
     x = Qbittorrent(username='admin', password='123456')
-    print pprint(x.get_torrents_for_tracker('https://www.norbits.net'))
-    print(time.time() - start)
+    #print pprint(x.get_torrents_for_tracker('https://www.norbits.net'))
+    #print(time.time() - start)
+
+    #x.download_torrent(r'C:\Users\steffen\Documents\GitHub\AutoUp\userdata\torrents\Colony.S01E10.1080p.WEB.DL-VietHD.torrent', r'C:\htpc\upload3\Colony.S01E10.1080p.WEB.DL-VietHD')

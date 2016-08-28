@@ -17,10 +17,11 @@ log = logging.getLogger(__name__)
 
 
 class BaseElement(object):
-    def __init__(self, path, save_torrent_path=None, *args, **kwargs):
+    def __init__(self, path, scan_path, save_torrent_path=None, *args, **kwargs):
         self.type = self.__class__.__name__.lower()
         self.name, self.ext = os.path.splitext(path)
         self.fp = path
+        self.scan_path = scan_path
         self.save_folder = save_torrent_path
         self.torrent_name = None
         self.save_torrent_path = save_torrent_path
@@ -70,14 +71,16 @@ class BaseElement(object):
 
 
 class Video(BaseElement):
-    def __init__(self, path, save_torrent_path=None, *args, **kwargs):
-        super(self.__class__, self).__init__(path, *args, **kwargs)
+    def __init__(self, path, scan_path=None, save_torrent_path=None, *args, **kwargs):
+        super(self.__class__, self).__init__(path, scan_path, *args, **kwargs)
         self.type = 'video'
         self.fp = path
+        self.scan_path = scan_path
         self.info = {}
         self.files = []
         self.has_nfo = False
         self.has_images = []
+        self.autoup_added_images = False
         self.summary = ''
 
         fps = []
@@ -123,6 +126,7 @@ class Video(BaseElement):
 
         # Extact some images from video files
         if not self.has_images:
+            self.autoup_added_images = True
             log.debug('This file has no images, gonna try to extract some')
             img = [make_images_from_video(k) for k in z]
             for zz in img:

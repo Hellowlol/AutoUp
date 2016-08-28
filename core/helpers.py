@@ -6,11 +6,12 @@ import subprocess
 import time
 from functools import wraps
 
-from bs4 import BeautifulSoup as bs
+
 import requests
 import six.moves.urllib.parse as parse
 import concurrent.futures as cf
 import itertools
+from bs4 import BeautifulSoup as bs
 
 from imgurpython import ImgurClient
 import tvdbapi_client
@@ -19,9 +20,6 @@ import core
 
 log = logging.getLogger(__name__)
 SESSION = requests.Session()
-
-
-
 
 try:
     import lxml
@@ -39,7 +37,7 @@ def timeme(func):
     return inner
 
 
-@timeme
+#@timeme
 def imdb_aka(s):
     """ Simple helper function that parses the result from a imdb aka search to find the correct imdbid
         This is only used since alof of the uploaded content is norwegian and
@@ -86,7 +84,7 @@ def imdb_aka(s):
     return res
 
 
-@timeme
+#@timeme
 def get_media_info(path, format='dict', media_info_cli=None):
     """ Note this is media info cli """
 
@@ -170,14 +168,15 @@ def upload_to_imgurl(fp, name):
                   'title': name,
                   'description': ''
                 }
-
-        image = client.upload_from_path(f, config=config, anon=True)
         try:
+            image = client.upload_from_path(f, config=config, anon=True)
             links.append((name, '[img]' + image['link'] + '[/img]'))
-        except:
-            pass
+        except Exception as e:
+            log.error('imgur %s' % e)
+            return []
 
     return sorted(links)
+
 
 def shell(cmd):
     try:
@@ -282,7 +281,7 @@ def check_predb(url=None, raw=None):
     return parse_predb(bs(r.text, bestparser))
 
 
-@timeme
+#@timeme
 def query_predb(search=None, check_all=False, async=False):
     """ Query predb to see if something is in the predb
 
@@ -299,7 +298,7 @@ def query_predb(search=None, check_all=False, async=False):
     log.debug('Searching predb for %s' % search)
 
     q_search = parse.quote_plus(search)
-    r = requests.get('http://predb.me/?search=%s' % q_search)
+    r = requests.get('http://predb.me/?search=%s' % q_search, timeout=5)
     t = []
     # Check every pages.. takes alot of time
     if check_all is True:
@@ -311,7 +310,7 @@ def query_predb(search=None, check_all=False, async=False):
             # there is only one page result but we add two
             pages = 2
 
-        log.debug('predbme had %s pages' % len(pages))
+        log.debug('predbme had %s pages' % pages)
 
         urls = ['http://predb.me/?search=%s&page=%s&jsload=1' % (q_search, z) for z in range(1, int(pages))]
         # async is useless since we just get blocked with 503
@@ -333,16 +332,15 @@ def query_predb(search=None, check_all=False, async=False):
         t.extend(check_predb(raw=r.text))
 
     for srr in itertools.chain(t):
+        log.debug('%r' % srr)
         if srr.get('name') == search:
+            log.debug('%s was a scene release' % search)
             return True
     return False
 
+#print query_predb('Billions.S01E02.720p.WEB-DL-NTb.mkv', check_all=True, async=True)
 
-
-
-#print query_predb('test', check_all=True, async=True)
-
-@timeme
+#@timeme
 def query_tvdb(name=None, id=None, imdbId=None, zap2itId=None, season=None, episode=None):
     # fuck this use tvmaze..
 
@@ -387,8 +385,20 @@ def query_tvdb(name=None, id=None, imdbId=None, zap2itId=None, season=None, epis
             print(e)
             return {}
 
+#@timeme
+def get_maze(imdbid=None, season=None, episode=None):
+    """ """
+    import pytvmaze
+    if season or episode:
+        show = pytvmaze.get_show(imdb_id=imdbid, embed='episodes')
+        for e in show.episodes:
+            if e.season_number == season and episode == e.episode_number:
+                return e.summary
 
-@timeme
+
+
+
+#@timeme
 def get_imdb(imdbid=None, season=None, episode=None, cache=False, anonymize=False):
     """ use this """
 
@@ -399,12 +409,22 @@ def get_imdb(imdbid=None, season=None, episode=None, cache=False, anonymize=Fals
 
     for ep in imdb.get_episodes(imdbid):
         if ep.season == season and ep.episode == episode:
-            return (ep, imdb.get_title_plots(ep.imdb_id)[0])
+            overview = imdb.get_title_plots(ep.imdb_id)
+            if len(overview):
+                summary = overview[0]
+            else:
+                # fallback to
+                # summary = query_tvdb(imdbId=imdbid, season=season, episode=episode).get('overview', '')
+                summary = get_maze(imdbid=imdbid, season=season, episode=episode)
 
+            return (ep, summary)
+
+#print(get_maze(imdbid='tt4209256', season=1, episode=10))
+#print(get_imdb(imdbid='tt4209256', season=1, episode=10))
 #print test_imdb(imdbid='tt1796960', season=1, episode=1)
 #print get_imdb(imdbid='tt0450232')
 #print get_imdb(imdbid='tt4270492', season=1, episode=2)
-#print query_tvdb(imdbId='tt1796960', season=1, episode=2)
+#print query_tvdb(imdbId='tt4209256', season=1, episode=10)
 #make_images_from_video(r'C:\htpc\upload5\Kaptein Sabeltann og skatten i Kjuttaviga\Kaptein.Sabeltann.og.skatten.i.Kjuttaviga.WEBDL-nrkdl.mkv')
 
 if __name__ == '__main__':

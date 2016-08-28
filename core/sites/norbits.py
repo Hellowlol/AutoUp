@@ -2,12 +2,10 @@
 # -*- coding: utf-8 -*-
 
 
-import json
 import os
 import sys
-from pprint import pprint as pp
 import re
-import logging
+
 
 from bs4 import BeautifulSoup as bs
 import requests
@@ -16,8 +14,11 @@ from core.helpers import imdb_aka, upload_to_imgurl, query_predb, make_images_fr
 from core.database import Database
 from core.sites import Site
 
+import logging
+
 
 log = logging.getLogger(__name__)
+print log
 
 
 class Norbits(Site):
@@ -68,16 +69,16 @@ class Norbits(Site):
                 'returnto': to}
 
         r = self.session.post(self.norbits_login_url, headers=self.headers, data=data)
-        log.info('Tried to login to Norbits %s' % r.status_code)
+        log.debug('Tried to login to Norbits %s' % r.status_code)
 
         html = bs(r.text.encode('latin-1'), 'html5lib')
         s = html.select('#userinfo')
 
         if len(s):
-            log.info('Login Norbits success')
+            log.debug('Login Norbits success')
             return True
         else:
-            log.info('Login Norbits error')
+            log.debug('Login Norbits error')
             False
 
     def fetcher(self, path, action='get', data=None, files=None):
@@ -108,17 +109,22 @@ class Norbits(Site):
 
         return r
 
-    def upload(self, data, dry_run, torrent_path=None):
-        """ Takes a dict or media_element"""
+    def upload(self, data, dry_run, torrent_path=None, save_path=None):
+        """ Takes a dict or media_element
+
+            Args:
+                data(BaseElement): 'Class the holds stuff'
+                dry_run(bool): 'Commandline arg to stop before the upload'
+                save_path(None): 'useless'
+        """
+
         # _.upload expects a dict
         if not isinstance(data, dict):
-            # returns the form..
-            data, torrent_path = self.prepare(data)
-            #print 'torrent_path', torrent_path
+            data, torrent_path, save_path = self.prepare(data)
 
         if dry_run:
             log.debug('Didnt upload to site because of dry run')
-            return data
+            return data, torrent_path, save_path
 
         # Try to upload
         r = self._upload(data)
@@ -126,7 +132,7 @@ class Norbits(Site):
         if r.status_code == 302:
             log.debug('302 somehting')
         #    return self._upload(data)
-        return data, torrent_path
+        return data, torrent_path, save_path
 
     def prepare(self, media_element, categories=None, comment=None):
         """ Prepare for upload
@@ -143,16 +149,35 @@ class Norbits(Site):
         """
         desc = ''
 
+        if self.comment or self.norbits_comment:
+            desc += '%s\n\n' % self.comment or self.norbits_comment
+
         # Allow
         if categories is None and not self.categories:
             categories = self._build_categories()
-            #log.debug(pp(self.categories))
+
+        log.info('First extract')
+        me = media_element.extract()
+
+        if media_element.has_images:
+            imgz = upload_to_imgurl(media_element.has_images, os.path.basename(me['filepath']))
+            imgz = '\n\n'.join([i for z in imgz for i in z])
+            desc += 'Some Screenshots\n\n'
+            desc += imgz
+
+            if media_element.autoup_added_images:
+                # Norbits dont like images in the torrents so if
+                # it was made automatically delete it.
+                for ii in media_element.has_images:
+                    try:
+                        os.remove(ii)
+                    except OSError:
+                        log.error('Failed to delete %s' % ii)
 
         torrent_info, save_path = media_element.to_torrent()
 
         if media_element.type in ['video', 'episode', 'movie']:
 
-            me = media_element.extract()
             # This would be the file name or the foldername
             filename = os.path.basename(me['filepath'])
 
@@ -244,14 +269,8 @@ class Norbits(Site):
             if fixed_imdb_id:
                 self.uploadform['infourl'] = (None, 'http://www.imdb.com/title/%s/' % fixed_imdb_id)
 
-            if media_element.has_images:
-                imgz = upload_to_imgurl(media_element.has_images, filename)
-                imgz = '\n\n'.join([i for z in imgz for i in z])
-                desc += 'Some Random Screenshots\n\n'
-                desc += imgz
-
             if me['type'] == 'episode' and query_predb(filename):
-                log.info('%s was a found on predb, this is a scene release')
+                log.info('%s was a found on predb, this is a scene release' % filename)
 
         if media_element.type in ['audio', 'song', 'album']:
             pass  # todo
@@ -261,11 +280,8 @@ class Norbits(Site):
         if desc:
             self.uploadform['descr'] = (None, desc + ' \n\ntest upload from https://github.com/Hellowlol/AutoUp, do not publish test of images')
 
-        #print(self.uploadform['descr'])
-        #print(self.uploadform)
-        #print pp(self.uploadform)
 
-        return self.uploadform, torrent_info._filepath
+        return self.uploadform, torrent_info._filepath, media_element.scan_path
 
     def _upload(self, data=None):
         response = self.fetcher(self.norbits_upload_url, action='post', files=data)
@@ -331,7 +347,6 @@ class Norbits(Site):
 
         log.debug('Fetching categories from norbits/browse')
         html = self.fetcher(self.norbits_cat_url)
-        print html
         site = bs(html.text.encode('utf-8'), "html5lib")
 
         all_cats = {}

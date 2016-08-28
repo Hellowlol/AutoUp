@@ -1,12 +1,12 @@
 import logging
+import logging.handlers
+
+
 import os
 import sys
 import threading
-import requests
-import rebulk
 import core.config
-import cachecontrol
-import tvdbapi_client
+import requests
 
 #from configobj import ConfigObj
 
@@ -17,8 +17,6 @@ except ImportError:
     class NullHandler(logging.Handler):
         def emit(self, record):
             pass
-
-
 
 RUN_DIR = os.path.dirname(__file__)
 
@@ -31,6 +29,9 @@ TORRENTS_PATH = os.path.join(USERDATA_PATH, 'torrents')
 CONFIG = None
 INIT_LOCK = threading.Lock()
 
+logging.getLogger(__name__).addHandler(NullHandler())
+
+# Create missing folders..
 try:
     os.makedirs(USERDATA_PATH)
 except OSError as e:
@@ -44,9 +45,17 @@ except OSError as e:
         raise
 
 
-def initialize(config_file):
-    #print "was initialize"
+def initialize(config_file=None, lvl=None):
+    """ Initialize the config and logging
 
+        Args:
+            config_file(str): ''
+            lvl(bool): ''
+
+        Returns:
+                config object
+
+    """
     with INIT_LOCK:
         global CONFIG
 
@@ -55,19 +64,63 @@ def initialize(config_file):
             config_file = os.path.join(USERDATA_PATH, 'config.ini')
 
         CONFIG = core.config.Config(config_file)
-        #print('CONFIG inside initialize %s' % CONFIG)
 
         if not os.path.exists(config_file):
             CONFIG.write()
 
-        logging.getLogger(__name__).addHandler(NullHandler())
+        log_path = os.path.join(USERDATA_PATH, 'log.txt')
 
-        logging.basicConfig(stream=sys.stdout, level=20)
+        handlers = []
+
+        log = logging.getLogger(__name__)
+
+        # Check the config file if cmd line isnt parsed
+        if lvl is None and CONFIG.LOGLVL == 'debug':
+            lvl = True
+
+        if lvl:
+            SH = logging.StreamHandler(sys.stdout)
+            handlers.append(SH)
+
+        if log_path:
+            FH = logging.handlers.RotatingFileHandler(log_path, maxBytes=25000000, backupCount=2)
+            handlers.append(FH)
+
+        logformatter = logging.Formatter('%(asctime)s :: %(name)s :: %(levelname)s :: %(message)s', "%Y-%m-%d %H:%M:%S")
+
+        if lvl:
+            loglevel = logging.DEBUG
+        else:
+            loglevel = logging.INFO
+
+        # Disable cherrypy access log
+        logging.getLogger('cherrypy.access').propagate = False
+
+        for h in handlers:
+
+            if h:
+                h.setLevel(loglevel)
+                h.setFormatter(logformatter)
+                #log.addHandler(h)
+                logging.getLogger('').addHandler(h)
+
+        log.setLevel(loglevel)
 
         # Silence some loggers
-        to_silence = ['requests', 'urllib3', 'rebulk', 'cachecontrol', 'tvdbapi_client']
+        for q in ['requests', 'urllib3', 'rebulk', 'cachecontrol', 'tvdbapi_client']:
+            try:
+                logging.getLogger(q).setLevel(logging.WARNING)
+            except:
+                pass
 
-        for q in to_silence:
-            logging.getLogger(q).setLevel(logging.WARNING)
+        return CONFIG
 
 
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    logging.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+#sys.excepthook = handle_exception

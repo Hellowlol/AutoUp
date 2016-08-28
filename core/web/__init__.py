@@ -24,7 +24,6 @@ class Root(object):
 
     @cherrypy.expose
     def index(self):
-        # return some path to f
         return 'Hello you!'
 
     @cherrypy.expose
