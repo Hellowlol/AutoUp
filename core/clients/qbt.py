@@ -89,10 +89,11 @@ class Qbittorrent(Client):
 
 
 if __name__ == '__main__':
-    import time
-    from pprint import pprint
-    start = time.time()
-    x = Qbittorrent(username='admin', password='123456')
+    pass
+    #import time
+    #from pprint import pprint
+    #start = time.time()
+    #x = Qbittorrent(username='admin', password='123456')
     #print pprint(x.get_torrents_for_tracker('https://www.norbits.net'))
     #print(time.time() - start)
 
